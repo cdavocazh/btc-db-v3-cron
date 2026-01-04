@@ -15,8 +15,8 @@ from io import StringIO
 # ============================================================
 # CONFIGURATION - UPDATE THESE WITH YOUR GITHUB DETAILS
 # ============================================================
-GITHUB_USERNAME = "YOUR_GITHUB_USERNAME"  # <-- CHANGE THIS
-GITHUB_REPO = "YOUR_REPO_NAME"            # <-- CHANGE THIS
+GITHUB_USERNAME = "ha0zh"
+GITHUB_REPO = "btc-db-v3"
 GITHUB_BRANCH = "main"
 # ============================================================
 
