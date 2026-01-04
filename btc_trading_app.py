@@ -35,8 +35,17 @@ st.markdown("""
 st.title("📈 BTC Trading Strategy Dashboard")
 st.markdown("**Asian Hours Strategy Backtest & Live Signals**")
 
+# ===== REFRESH BUTTON =====
+col_refresh1, col_refresh2, col_refresh3 = st.columns([1, 1, 4])
+with col_refresh1:
+    if st.button("🔄 Refresh Data"):
+        st.cache_data.clear()
+        st.rerun()
+with col_refresh2:
+    st.caption(f"Last refresh: {datetime.now().strftime('%H:%M:%S')}")
+
 # ===== DATA LOADING =====
-@st.cache_data
+@st.cache_data(ttl=300)  # Cache expires after 5 minutes (300 seconds)
 def load_data(file_path='BTC_OHLC_1h_gmt8_updated.csv'):
     """Load the BTC OHLC data"""
     try:
@@ -71,7 +80,7 @@ if df_raw is not None:
     MA200_PERIOD = 200
 
     # ===== INDICATOR CALCULATIONS =====
-    @st.cache_data
+    @st.cache_data(ttl=300)  # Cache expires after 5 minutes
     def calculate_indicators(df):
         """Calculate all technical indicators"""
         df = df.copy()
@@ -111,7 +120,7 @@ if df_raw is not None:
     atr_med = df['atr20'].median()
 
     # ===== BACKTEST FUNCTION =====
-    @st.cache_data
+    @st.cache_data(ttl=300)  # Cache expires after 5 minutes
     def run_backtest(df, initial_eq, risk_pct, stop_pct, atr_mult, atr_med):
         """Run the Asian Hours backtest"""
         
