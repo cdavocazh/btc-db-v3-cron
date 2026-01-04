@@ -1,22 +1,22 @@
 """
 BTC Trading Strategy Dashboard - Streamlit Web App
-Displays pre-computed backtest results from GitHub Actions.
-Results are computed hourly by run_backtest.py
+Fetches pre-computed backtest results directly from GitHub.
+This ensures fresh data on every refresh without needing to redeploy.
 """
 
 import streamlit as st
 import pandas as pd
 import numpy as np
 import json
-import os
+import requests
 from datetime import datetime
 from io import StringIO
 
 # ============================================================
 # CONFIGURATION - UPDATE THESE WITH YOUR GITHUB DETAILS
 # ============================================================
-GITHUB_USERNAME = "ha0zh"  
-GITHUB_REPO = "btc-db-v3"
+GITHUB_USERNAME = "YOUR_GITHUB_USERNAME"  # <-- CHANGE THIS
+GITHUB_REPO = "YOUR_REPO_NAME"            # <-- CHANGE THIS
 GITHUB_BRANCH = "main"
 # ============================================================
 
@@ -34,8 +34,6 @@ st.set_page_config(
 st.markdown("""
 <style>
     .stDataFrame { font-size: 12px; }
-    .big-metric { font-size: 2rem; font-weight: bold; }
-    .update-time { color: #666; font-size: 0.9rem; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -43,60 +41,92 @@ st.markdown("""
 st.title("📈 BTC Trading Strategy Dashboard")
 st.markdown("**Asian Hours Strategy Backtest & Live Signals**")
 
-# ===== LOAD PRE-COMPUTED RESULTS =====
-RESULTS_DIR = 'backtest_results'
+# ===== REFRESH BUTTON =====
+col1, col2 = st.columns([1, 5])
+with col1:
+    refresh_clicked = st.button("🔄 Refresh Data", type="primary")
+with col2:
+    st.caption(f"Fetches latest data from GitHub | Last loaded: {datetime.now().strftime('%H:%M:%S')}")
 
-@st.cache_data(ttl=60)  # Cache for 1 minute only
+if refresh_clicked:
+    st.cache_data.clear()
+    st.rerun()
+
+# ===== FETCH DATA FROM GITHUB =====
+@st.cache_data(ttl=60)  # Cache for 60 seconds only
+def fetch_from_github(url):
+    """Fetch a file from GitHub raw URL"""
+    try:
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        return response.text
+    except Exception as e:
+        return None
+
+@st.cache_data(ttl=60)
 def load_results():
-    """Load pre-computed backtest results"""
+    """Load pre-computed backtest results from GitHub"""
     results = {}
     
     # Load metrics JSON
-    metrics_file = f"{RESULTS_DIR}/metrics.json"
-    if os.path.exists(metrics_file):
-        with open(metrics_file, 'r') as f:
-            data = json.load(f)
+    metrics_url = f"{GITHUB_RAW_BASE}/backtest_results/metrics.json"
+    metrics_text = fetch_from_github(metrics_url)
+    
+    if metrics_text:
+        try:
+            data = json.loads(metrics_text)
             results['metrics'] = data.get('metrics', {})
             results['live_position'] = data.get('live_position')
             results['equity_curve'] = data.get('equity_curve', [])
             results['last_updated'] = data.get('last_updated', 'Unknown')
             results['data_timestamp'] = data.get('data_latest_timestamp', 'Unknown')
+        except:
+            results['metrics'] = {}
+            results['live_position'] = None
+            results['equity_curve'] = []
+            results['last_updated'] = 'Error parsing data'
+            results['data_timestamp'] = 'Error'
     else:
         results['metrics'] = {}
         results['live_position'] = None
         results['equity_curve'] = []
-        results['last_updated'] = 'No data'
-        results['data_timestamp'] = 'No data'
+        results['last_updated'] = 'Could not fetch from GitHub'
+        results['data_timestamp'] = 'N/A'
     
     # Load trade log
-    trade_file = f"{RESULTS_DIR}/trade_log.csv"
-    if os.path.exists(trade_file):
-        results['trade_log'] = pd.read_csv(trade_file)
+    trade_url = f"{GITHUB_RAW_BASE}/backtest_results/trade_log.csv"
+    trade_text = fetch_from_github(trade_url)
+    if trade_text:
+        try:
+            results['trade_log'] = pd.read_csv(StringIO(trade_text))
+        except:
+            results['trade_log'] = pd.DataFrame()
     else:
         results['trade_log'] = pd.DataFrame()
     
     # Load conditions
-    conditions_file = f"{RESULTS_DIR}/conditions.csv"
-    if os.path.exists(conditions_file):
-        results['conditions'] = pd.read_csv(conditions_file, index_col=0)
+    conditions_url = f"{GITHUB_RAW_BASE}/backtest_results/conditions.csv"
+    conditions_text = fetch_from_github(conditions_url)
+    if conditions_text:
+        try:
+            results['conditions'] = pd.read_csv(StringIO(conditions_text), index_col=0)
+        except:
+            results['conditions'] = pd.DataFrame()
     else:
         results['conditions'] = pd.DataFrame()
     
     # Load indicators
-    indicators_file = f"{RESULTS_DIR}/indicators.csv"
-    if os.path.exists(indicators_file):
-        results['indicators'] = pd.read_csv(indicators_file, index_col=0)
+    indicators_url = f"{GITHUB_RAW_BASE}/backtest_results/indicators.csv"
+    indicators_text = fetch_from_github(indicators_url)
+    if indicators_text:
+        try:
+            results['indicators'] = pd.read_csv(StringIO(indicators_text), index_col=0)
+        except:
+            results['indicators'] = pd.DataFrame()
     else:
         results['indicators'] = pd.DataFrame()
     
     return results
-
-# Refresh button
-col_refresh1, col_refresh2 = st.columns([1, 5])
-with col_refresh1:
-    if st.button("🔄 Refresh"):
-        st.cache_data.clear()
-        st.rerun()
 
 # Load results
 results = load_results()
@@ -108,21 +138,30 @@ indicators = results['indicators']
 equity_curve = results['equity_curve']
 
 # ===== HEADER INFO =====
-st.markdown(f"**🕐 Backtest Last Run:** {results['last_updated']} | **📊 Data Until:** {results['data_timestamp']}")
-st.caption("Backtest runs automatically every hour via GitHub Actions")
+st.markdown(f"""
+**🕐 Backtest Last Run:** {results['last_updated']}  
+**📊 Data Until:** {results['data_timestamp']}
+""")
 st.markdown("---")
 
 # ===== CHECK IF DATA EXISTS =====
 if not metrics:
-    st.error("⚠️ No backtest results found. The GitHub Actions workflow needs to run first.")
+    st.error("⚠️ Could not load backtest results from GitHub.")
+    st.warning(f"""
+    **Please check:**
+    1. Update the GitHub username and repo at the top of `btc_trading_app.py`
+    2. Make sure the `backtest_results/` folder exists in your repo
+    3. Run the GitHub Actions workflow at least once
+    
+    **Current configuration:**
+    - GitHub URL: `{GITHUB_RAW_BASE}`
+    """)
     st.info("""
-    **To fix this:**
+    **To run the backtest:**
     1. Go to your GitHub repository
     2. Click on the **Actions** tab
     3. Select **Update BTC Data Hourly**
     4. Click **Run workflow**
-    
-    The backtest will run and results will appear here within a few minutes.
     """)
     st.stop()
 
@@ -254,4 +293,4 @@ st.markdown("""
 
 # Footer
 st.markdown("---")
-st.caption("BTC Trading Strategy Dashboard | Backtest runs hourly via GitHub Actions")
+st.caption("BTC Trading Strategy Dashboard | Data fetched directly from GitHub | Click 'Refresh Data' for latest results")
