@@ -10,6 +10,18 @@ import numpy as np
 import json
 import os
 from datetime import datetime
+from io import StringIO
+
+# ============================================================
+# CONFIGURATION - UPDATE THESE WITH YOUR GITHUB DETAILS
+# ============================================================
+GITHUB_USERNAME = "ha0zh"  
+GITHUB_REPO = "btc-db-v3"
+GITHUB_BRANCH = "main"
+# ============================================================
+
+# Construct raw GitHub URLs
+GITHUB_RAW_BASE = f"https://raw.githubusercontent.com/{GITHUB_USERNAME}/{GITHUB_REPO}/{GITHUB_BRANCH}"
 
 # Page configuration
 st.set_page_config(
