@@ -1,13 +1,13 @@
 timestamp,close,potential_side,below_lower_MR_long,above_upper_MR_short,price_above_high3,price_below_low3,rsi_gt_60_BO_long,rsi_lt_40_BO_short,potential_stop,atr_gt_median_vol
-2026-01-10 09:00:00,90682.0,0,False,False,False,False,False,False,90682.0,True
-2026-01-10 10:00:00,90694.9,0,False,False,False,False,False,False,90694.9,True
-2026-01-10 11:00:00,90639.1,0,False,False,False,False,False,False,90639.1,True
-2026-01-10 12:00:00,90451.1,0,False,False,False,True,False,False,90451.1,True
-2026-01-10 13:00:00,90605.1,0,False,False,False,False,False,True,90605.1,True
-2026-01-10 14:00:00,90513.0,0,False,False,False,False,False,True,90513.0,True
-2026-01-10 15:00:00,90679.9,0,False,False,True,False,False,True,90679.9,True
-2026-01-10 16:00:00,90659.6,0,False,False,False,False,False,False,90659.6,True
-2026-01-10 17:00:00,90763.0,0,False,False,True,False,True,False,90763.0,False
-2026-01-10 18:00:00,90836.3,0,False,False,True,False,True,False,90836.3,False
-2026-01-10 19:00:00,90727.0,0,False,False,False,False,False,False,90727.0,False
-2026-01-10 20:00:00,90727.7,0,False,False,False,False,False,False,90727.7,False
+2026-01-11 05:00:00,90505.0,0,False,False,False,True,False,True,90505.0,False
+2026-01-11 06:00:00,90424.4,0,False,False,False,True,False,True,90424.4,False
+2026-01-11 07:00:00,90504.9,0,False,False,False,False,False,True,90504.9,False
+2026-01-11 08:00:00,90629.0,0,False,False,True,False,False,True,90629.0,False
+2026-01-11 09:00:00,90625.7,0,False,False,False,False,False,False,90625.7,False
+2026-01-11 10:00:00,90692.1,0,False,False,True,False,False,False,90692.1,False
+2026-01-11 11:00:00,90733.0,0,False,False,True,False,False,False,90733.0,False
+2026-01-11 12:00:00,90799.1,0,False,False,True,False,True,False,90799.1,False
+2026-01-11 13:00:00,90777.8,0,False,False,False,False,False,False,90777.8,False
+2026-01-11 14:00:00,90743.0,0,False,False,False,False,False,False,90743.0,False
+2026-01-11 15:00:00,90713.0,0,False,False,False,False,True,False,90713.0,False
+2026-01-11 16:00:00,90734.5,0,False,False,False,False,False,False,90734.5,False
