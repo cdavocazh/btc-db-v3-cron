@@ -9,17 +9,12 @@ import pandas as pd
 import numpy as np
 import itertools
 import json
-import requests
 from datetime import datetime, timezone
 import os
 
 # Configuration
 CSV_FILE = 'BTC_OHLC_1h_gmt8_updated.csv'
 RESULTS_DIR = 'backtest_results'
-
-# Binance API endpoints
-BINANCE_PRICE_URL = "https://api.binance.com/api/v3/ticker/price"
-BINANCE_KLINES_URL = "https://api.binance.com/api/v3/klines"
 
 # Strategy Parameters
 INITIAL_EQ = 100000
@@ -37,97 +32,6 @@ def log(message):
     """Print timestamped log message"""
     timestamp = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
     print(f"[{timestamp}] {message}")
-
-def fetch_btc_price():
-    """Fetch current BTC-USDT price from Binance"""
-    try:
-        response = requests.get(
-            BINANCE_PRICE_URL,
-            params={"symbol": "BTCUSDT"},
-            timeout=10
-        )
-        if response.status_code == 200:
-            data = response.json()
-            return float(data['price']), None
-        return None, f"HTTP {response.status_code}"
-    except Exception as e:
-        return None, str(e)
-
-def fetch_btc_klines(interval='15m', limit=96):
-    """Fetch BTC-USDT klines from Binance
-
-    For 24 hours: 1m=1440, 3m=480, 15m=96, 1h=24, 4h=6
-    """
-    try:
-        response = requests.get(
-            BINANCE_KLINES_URL,
-            params={
-                "symbol": "BTCUSDT",
-                "interval": interval,
-                "limit": limit
-            },
-            timeout=15
-        )
-        if response.status_code == 200:
-            data = response.json()
-            # Kline format: [open_time, open, high, low, close, volume, close_time, ...]
-            records = []
-            for k in data:
-                records.append({
-                    'open_time': k[0],
-                    'open': float(k[1]),
-                    'high': float(k[2]),
-                    'low': float(k[3]),
-                    'close': float(k[4]),
-                    'volume': float(k[5]),
-                    'close_time': k[6]
-                })
-            return records, None
-        return None, f"HTTP {response.status_code}"
-    except Exception as e:
-        return None, str(e)
-
-def save_btc_price_data():
-    """Fetch and save BTC price data for the dashboard"""
-    log("Fetching BTC price data from Binance...")
-
-    btc_data = {
-        'current_price': None,
-        'price_updated': datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC'),
-        'klines': {}
-    }
-
-    # Fetch current price
-    price, error = fetch_btc_price()
-    if price:
-        btc_data['current_price'] = price
-        log(f"✓ Current BTC price: ${price:,.2f}")
-    else:
-        log(f"✗ Failed to fetch price: {error}")
-
-    # Fetch klines for different intervals
-    intervals = {
-        '1m': 1440,   # 24 hours
-        '3m': 480,    # 24 hours
-        '15m': 96,    # 24 hours
-        '1h': 24,     # 24 hours
-        '4h': 6       # 24 hours
-    }
-
-    for interval, limit in intervals.items():
-        klines, error = fetch_btc_klines(interval=interval, limit=limit)
-        if klines:
-            btc_data['klines'][interval] = klines
-            log(f"✓ Fetched {len(klines)} klines for {interval} interval")
-        else:
-            log(f"✗ Failed to fetch {interval} klines: {error}")
-
-    # Save to JSON
-    with open(f"{RESULTS_DIR}/btc_price.json", 'w') as f:
-        json.dump(btc_data, f)
-    log(f"✓ Saved {RESULTS_DIR}/btc_price.json")
-
-    return btc_data
 
 def load_data():
     """Load BTC OHLC data"""
@@ -448,9 +352,6 @@ def main():
         equity_df = pd.DataFrame(equity_curve_ts)
         equity_df.to_csv(f"{RESULTS_DIR}/equity_curve_ts.csv", index=False)
         log(f"✓ Saved {RESULTS_DIR}/equity_curve_ts.csv ({len(equity_curve_ts)} points)")
-
-    # 6. Fetch and save BTC price data
-    save_btc_price_data()
 
     # Print summary
     log("")

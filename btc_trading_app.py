@@ -28,6 +28,162 @@ GITHUB_RAW_BASE = f"https://raw.githubusercontent.com/{GITHUB_USERNAME}/{GITHUB_
 # Timezone for display
 GMT8 = pytz.timezone('Asia/Singapore')
 
+# ===== LIVE BTC PRICE API FUNCTIONS =====
+# Using Bybit and OKX APIs (no geo-restrictions)
+
+def fetch_btc_price_bybit():
+    """Fetch current BTC-USDT price from Bybit"""
+    try:
+        response = requests.get(
+            "https://api.bybit.com/v5/market/tickers",
+            params={"category": "spot", "symbol": "BTCUSDT"},
+            timeout=10
+        )
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('retCode') == 0:
+                result = data.get('result', {}).get('list', [])
+                if result:
+                    return float(result[0]['lastPrice']), None
+        return None, f"Bybit error: {response.status_code}"
+    except Exception as e:
+        return None, str(e)
+
+def fetch_btc_price_okx():
+    """Fetch current BTC-USDT price from OKX"""
+    try:
+        response = requests.get(
+            "https://www.okx.com/api/v5/market/ticker",
+            params={"instId": "BTC-USDT"},
+            timeout=10
+        )
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('code') == '0':
+                result = data.get('data', [])
+                if result:
+                    return float(result[0]['last']), None
+        return None, f"OKX error: {response.status_code}"
+    except Exception as e:
+        return None, str(e)
+
+def fetch_btc_price():
+    """Fetch current BTC price with fallback"""
+    price, error = fetch_btc_price_bybit()
+    if price:
+        return price, None
+    price, error = fetch_btc_price_okx()
+    if price:
+        return price, None
+    return None, error
+
+def fetch_btc_klines_bybit(interval='15', limit=96):
+    """Fetch BTC-USDT klines from Bybit
+
+    Intervals: 1, 3, 5, 15, 30, 60, 120, 240, 360, 720, D, M, W
+    """
+    try:
+        response = requests.get(
+            "https://api.bybit.com/v5/market/kline",
+            params={
+                "category": "spot",
+                "symbol": "BTCUSDT",
+                "interval": interval,
+                "limit": limit
+            },
+            timeout=15
+        )
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('retCode') == 0:
+                klines = data.get('result', {}).get('list', [])
+                if klines:
+                    # Bybit returns: [startTime, openPrice, highPrice, lowPrice, closePrice, volume, turnover]
+                    df = pd.DataFrame(klines, columns=[
+                        'open_time', 'open', 'high', 'low', 'close', 'volume', 'turnover'
+                    ])
+                    df['open_time'] = pd.to_datetime(df['open_time'].astype(int), unit='ms')
+                    # Convert to GMT+8
+                    df['time_gmt8'] = df['open_time'] + pd.Timedelta(hours=8)
+                    for col in ['open', 'high', 'low', 'close']:
+                        df[col] = df[col].astype(float)
+                    # Sort ascending (Bybit returns newest first)
+                    df = df.sort_values('time_gmt8')
+                    return df, None
+        return None, f"Bybit klines error: {response.status_code}"
+    except Exception as e:
+        return None, str(e)
+
+def fetch_btc_klines_okx(interval='1H', limit=96):
+    """Fetch BTC-USDT klines from OKX
+
+    Intervals: 1m, 3m, 5m, 15m, 30m, 1H, 2H, 4H, 6H, 12H, 1D
+    """
+    try:
+        response = requests.get(
+            "https://www.okx.com/api/v5/market/candles",
+            params={
+                "instId": "BTC-USDT",
+                "bar": interval,
+                "limit": str(limit)
+            },
+            timeout=15
+        )
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('code') == '0':
+                klines = data.get('data', [])
+                if klines:
+                    # OKX returns: [ts, o, h, l, c, vol, volCcy, volCcyQuote, confirm]
+                    df = pd.DataFrame(klines, columns=[
+                        'open_time', 'open', 'high', 'low', 'close', 'volume',
+                        'volCcy', 'volCcyQuote', 'confirm'
+                    ])
+                    df['open_time'] = pd.to_datetime(df['open_time'].astype(int), unit='ms')
+                    # Convert to GMT+8
+                    df['time_gmt8'] = df['open_time'] + pd.Timedelta(hours=8)
+                    for col in ['open', 'high', 'low', 'close']:
+                        df[col] = df[col].astype(float)
+                    # Sort ascending (OKX returns newest first)
+                    df = df.sort_values('time_gmt8')
+                    return df, None
+        return None, f"OKX klines error: {response.status_code}"
+    except Exception as e:
+        return None, str(e)
+
+def fetch_btc_klines(interval_key):
+    """Fetch BTC klines with fallback
+
+    interval_key: '1m', '3m', '15m', '1h', '4h'
+    """
+    # Map to API-specific intervals and limits for 24 hours
+    bybit_map = {
+        '1m': ('1', 1440),
+        '3m': ('3', 480),
+        '15m': ('15', 96),
+        '1h': ('60', 24),
+        '4h': ('240', 6)
+    }
+    okx_map = {
+        '1m': ('1m', 1440),
+        '3m': ('3m', 480),
+        '15m': ('15m', 96),
+        '1h': ('1H', 24),
+        '4h': ('4H', 6)
+    }
+
+    bybit_interval, limit = bybit_map.get(interval_key, ('15', 96))
+    df, error = fetch_btc_klines_bybit(interval=bybit_interval, limit=limit)
+    if df is not None:
+        return df, None
+
+    okx_interval, limit = okx_map.get(interval_key, ('15m', 96))
+    df, error = fetch_btc_klines_okx(interval=okx_interval, limit=limit)
+    if df is not None:
+        return df, None
+
+    return None, error
+
 def convert_utc_to_gmt8(utc_str):
     """Convert UTC timestamp string to GMT+8"""
     if not utc_str or utc_str == 'Unknown':
@@ -106,7 +262,6 @@ def load_results():
         'live_position': None,
         'equity_curve': [],
         'equity_curve_ts': pd.DataFrame(),
-        'btc_price': {},
         'last_updated': 'Unknown',
         'data_timestamp': 'Unknown',
         'trade_log': pd.DataFrame(),
@@ -169,16 +324,6 @@ def load_results():
         except Exception as e:
             results['debug_messages'].append(f"  → Equity curve CSV parse error: {e}")
 
-    # Load BTC price data
-    btc_price_text, msg = fetch_from_github("backtest_results/btc_price.json")
-    results['debug_messages'].append(msg)
-    if btc_price_text:
-        try:
-            results['btc_price'] = json.loads(btc_price_text)
-            results['debug_messages'].append(f"  → BTC price loaded: ${results['btc_price'].get('current_price', 0):,.2f}")
-        except Exception as e:
-            results['debug_messages'].append(f"  → BTC price JSON parse error: {e}")
-
     return results
 
 # ===== LOAD DATA =====
@@ -190,7 +335,6 @@ conditions = results['conditions']
 indicators = results['indicators']
 equity_curve = results['equity_curve']
 equity_curve_ts = results['equity_curve_ts']
-btc_price_data = results['btc_price']
 
 # ===== DEBUG INFO =====
 if show_debug:
@@ -233,12 +377,10 @@ if not metrics:
     st.stop()
 
 # ===== LIVE BTC PRICE =====
-st.subheader("💰 BTC-USDT Perpetual")
+st.subheader("💰 BTC-USDT Perpetual (Live)")
 
-# Display current price from loaded data
-btc_price = btc_price_data.get('current_price')
-price_updated = btc_price_data.get('price_updated', 'Unknown')
-price_updated_gmt8 = convert_utc_to_gmt8(price_updated)
+# Fetch current price from Bybit/OKX API
+btc_price, price_error = fetch_btc_price()
 
 if btc_price:
     # Display current price prominently
@@ -246,10 +388,11 @@ if btc_price:
     with price_col1:
         st.metric("Current Price", f"${btc_price:,.2f}")
     with price_col2:
-        st.caption(f"Price as of: {price_updated_gmt8}")
-        st.caption("Data updates hourly via cron job. Click 'Refresh' to reload.")
+        current_time_gmt8 = datetime.now(pytz.UTC).astimezone(GMT8).strftime('%Y-%m-%d %H:%M:%S')
+        st.caption(f"Last updated: {current_time_gmt8} GMT+8")
+        st.caption("Click 'Refresh' to get latest price")
 else:
-    st.warning("BTC price data not available. Run the backtest cron job to fetch price data.")
+    st.warning(f"Could not fetch BTC price: {price_error}")
 
 # Price chart section
 st.markdown("##### 24-Hour Price Chart")
@@ -270,13 +413,9 @@ selected_interval = st.selectbox(
 )
 
 interval_code = interval_options[selected_interval]
-klines_data = btc_price_data.get('klines', {}).get(interval_code, [])
+klines_df, klines_error = fetch_btc_klines(interval_code)
 
-if klines_data:
-    # Convert klines to DataFrame
-    klines_df = pd.DataFrame(klines_data)
-    klines_df['time_gmt8'] = pd.to_datetime(klines_df['open_time'], unit='ms') + pd.Timedelta(hours=8)
-
+if klines_df is not None and not klines_df.empty:
     # Create chart data
     chart_df = klines_df[['time_gmt8', 'close']].copy()
     chart_df = chart_df.set_index('time_gmt8')
@@ -289,7 +428,7 @@ if klines_data:
     low_24h = klines_df['low'].min()
     st.caption(f"24h High: ${high_24h:,.2f} | 24h Low: ${low_24h:,.2f} | Range: ${high_24h - low_24h:,.2f}")
 else:
-    st.info("Price chart data not available. Run the backtest cron job to fetch kline data.")
+    st.warning(f"Could not fetch price chart: {klines_error}")
 
 st.markdown("---")
 
