@@ -13,6 +13,7 @@ import time
 from datetime import datetime, timedelta
 from io import StringIO
 import pytz
+import altair as alt
 
 # ============================================================
 # CONFIGURATION - UPDATE THESE WITH YOUR GITHUB DETAILS
@@ -418,10 +419,29 @@ klines_df, klines_error = fetch_btc_klines(interval_code)
 if klines_df is not None and not klines_df.empty:
     # Create chart data
     chart_df = klines_df[['time_gmt8', 'close']].copy()
-    chart_df = chart_df.set_index('time_gmt8')
-    chart_df.columns = ['Price']
+    chart_df.columns = ['Time', 'Price']
 
-    st.line_chart(chart_df)
+    # Calculate y-axis range with padding to show price movements clearly
+    price_min = chart_df['Price'].min()
+    price_max = chart_df['Price'].max()
+    price_range = price_max - price_min
+    padding = price_range * 0.1  # 10% padding
+    y_min = price_min - padding
+    y_max = price_max + padding
+
+    # Create Altair chart with scaled y-axis
+    chart = alt.Chart(chart_df).mark_line(color='#00d4aa', strokeWidth=2).encode(
+        x=alt.X('Time:T', title='Time (GMT+8)', axis=alt.Axis(format='%H:%M', labelAngle=-45)),
+        y=alt.Y('Price:Q', title='Price (USDT)', scale=alt.Scale(domain=[y_min, y_max])),
+        tooltip=[
+            alt.Tooltip('Time:T', title='Time', format='%Y-%m-%d %H:%M'),
+            alt.Tooltip('Price:Q', title='Price', format='$,.2f')
+        ]
+    ).properties(
+        height=400
+    ).interactive()
+
+    st.altair_chart(chart, use_container_width=True)
 
     # Show price range info
     high_24h = klines_df['high'].max()
