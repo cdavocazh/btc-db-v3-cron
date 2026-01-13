@@ -417,36 +417,93 @@ interval_code = interval_options[selected_interval]
 klines_df, klines_error = fetch_btc_klines(interval_code)
 
 if klines_df is not None and not klines_df.empty:
-    # Create chart data
-    chart_df = klines_df[['time_gmt8', 'close']].copy()
-    chart_df.columns = ['Time', 'Price']
+    # Prepare candlestick data
+    candle_df = klines_df[['time_gmt8', 'open', 'high', 'low', 'close', 'volume']].copy()
+    candle_df.columns = ['Time', 'Open', 'High', 'Low', 'Close', 'Volume']
 
-    # Calculate y-axis range with padding to show price movements clearly
-    price_min = chart_df['Price'].min()
-    price_max = chart_df['Price'].max()
+    # Determine candle color (green for up, red for down)
+    candle_df['Color'] = candle_df.apply(lambda x: 'green' if x['Close'] >= x['Open'] else 'red', axis=1)
+
+    # Calculate y-axis range with padding
+    price_min = candle_df['Low'].min()
+    price_max = candle_df['High'].max()
     price_range = price_max - price_min
-    padding = price_range * 0.1  # 10% padding
+    padding = price_range * 0.1
     y_min = price_min - padding
     y_max = price_max + padding
 
-    # Create Altair chart with scaled y-axis
-    chart = alt.Chart(chart_df).mark_line(color='#00d4aa', strokeWidth=2).encode(
-        x=alt.X('Time:T', title='Time (GMT+8)', axis=alt.Axis(format='%H:%M', labelAngle=-45)),
-        y=alt.Y('Price:Q', title='Price (USDT)', scale=alt.Scale(domain=[y_min, y_max])),
+    # === CANDLESTICK CHART ===
+    # Base chart for shared x-axis encoding
+    base = alt.Chart(candle_df).encode(
+        x=alt.X('Time:T', title=None, axis=alt.Axis(labels=False, ticks=False))
+    )
+
+    # Candlestick wicks (high-low line)
+    wicks = base.mark_rule().encode(
+        y=alt.Y('Low:Q', title='Price (USDT)', scale=alt.Scale(domain=[y_min, y_max])),
+        y2=alt.Y2('High:Q'),
+        color=alt.Color('Color:N', scale=alt.Scale(domain=['green', 'red'], range=['#00d4aa', '#ff4d4d']), legend=None),
         tooltip=[
             alt.Tooltip('Time:T', title='Time', format='%Y-%m-%d %H:%M'),
-            alt.Tooltip('Price:Q', title='Price', format='$,.2f')
+            alt.Tooltip('Open:Q', title='Open', format='$,.2f'),
+            alt.Tooltip('High:Q', title='High', format='$,.2f'),
+            alt.Tooltip('Low:Q', title='Low', format='$,.2f'),
+            alt.Tooltip('Close:Q', title='Close', format='$,.2f'),
+            alt.Tooltip('Volume:Q', title='Volume', format=',.0f')
         ]
-    ).properties(
-        height=400
-    ).interactive()
+    )
 
-    st.altair_chart(chart, use_container_width=True)
+    # Candlestick bodies (open-close bar)
+    bodies = base.mark_bar(size=6).encode(
+        y=alt.Y('Open:Q', scale=alt.Scale(domain=[y_min, y_max])),
+        y2=alt.Y2('Close:Q'),
+        color=alt.Color('Color:N', scale=alt.Scale(domain=['green', 'red'], range=['#00d4aa', '#ff4d4d']), legend=None),
+        tooltip=[
+            alt.Tooltip('Time:T', title='Time', format='%Y-%m-%d %H:%M'),
+            alt.Tooltip('Open:Q', title='Open', format='$,.2f'),
+            alt.Tooltip('High:Q', title='High', format='$,.2f'),
+            alt.Tooltip('Low:Q', title='Low', format='$,.2f'),
+            alt.Tooltip('Close:Q', title='Close', format='$,.2f'),
+            alt.Tooltip('Volume:Q', title='Volume', format=',.0f')
+        ]
+    )
+
+    # Combine wicks and bodies for candlestick chart
+    candlestick_chart = (wicks + bodies).properties(height=300)
+
+    # === VOLUME CHART ===
+    volume_chart = alt.Chart(candle_df).mark_bar().encode(
+        x=alt.X('Time:T', title='Time (GMT+8)', axis=alt.Axis(format='%H:%M', labelAngle=-45)),
+        y=alt.Y('Volume:Q', title='Volume (USDT)', axis=alt.Axis(format='~s')),
+        color=alt.Color('Color:N', scale=alt.Scale(domain=['green', 'red'], range=['#00d4aa', '#ff4d4d']), legend=None),
+        tooltip=[
+            alt.Tooltip('Time:T', title='Time', format='%Y-%m-%d %H:%M'),
+            alt.Tooltip('Volume:Q', title='Volume', format=',.0f')
+        ]
+    ).properties(height=100)
+
+    # Stack candlestick and volume charts vertically
+    combined_chart = alt.vconcat(
+        candlestick_chart,
+        volume_chart,
+        spacing=0
+    ).resolve_scale(
+        x='shared'
+    ).configure_view(
+        strokeWidth=0
+    ).configure_axis(
+        grid=True,
+        gridColor='#333333',
+        gridOpacity=0.3
+    )
+
+    st.altair_chart(combined_chart, use_container_width=True)
 
     # Show price range info
-    high_24h = klines_df['high'].max()
-    low_24h = klines_df['low'].min()
-    st.caption(f"24h High: ${high_24h:,.2f} | 24h Low: ${low_24h:,.2f} | Range: ${high_24h - low_24h:,.2f}")
+    high_24h = candle_df['High'].max()
+    low_24h = candle_df['Low'].min()
+    total_volume = candle_df['Volume'].sum()
+    st.caption(f"24h High: ${high_24h:,.2f} | 24h Low: ${low_24h:,.2f} | Range: ${high_24h - low_24h:,.2f} | Total Volume: {total_volume:,.0f} USDT")
 else:
     st.warning(f"Could not fetch price chart: {klines_error}")
 
