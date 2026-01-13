@@ -421,6 +421,10 @@ if klines_df is not None and not klines_df.empty:
     candle_df = klines_df[['time_gmt8', 'open', 'high', 'low', 'close', 'volume']].copy()
     candle_df.columns = ['Time', 'Open', 'High', 'Low', 'Close', 'Volume']
 
+    # Ensure numeric types
+    for col in ['Open', 'High', 'Low', 'Close', 'Volume']:
+        candle_df[col] = pd.to_numeric(candle_df[col], errors='coerce')
+
     # Determine candle color (green for up, red for down)
     candle_df['Color'] = candle_df.apply(lambda x: 'green' if x['Close'] >= x['Open'] else 'red', axis=1)
 
