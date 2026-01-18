@@ -12,6 +12,13 @@ import json
 from datetime import datetime, timezone
 import os
 
+# Import Telegram bot for notifications (optional)
+try:
+    from telegram_bot import send_signal_notification, send_daily_summary
+    TELEGRAM_ENABLED = True
+except ImportError:
+    TELEGRAM_ENABLED = False
+
 # Configuration
 CSV_FILE = 'BTC_OHLC_1h_gmt8_updated.csv'
 RESULTS_DIR = 'backtest_results'
@@ -367,6 +374,10 @@ def main():
     if live_position:
         log(f"LIVE POSITION: {live_position['position'].upper()} @ ${live_position['entry_price']:,.0f}")
         log(f"  Stop: ${live_position['stop_price']:,.0f} | Target: ${live_position['tp_price']:,.0f}")
+
+        # Send Telegram notification for new signal
+        if TELEGRAM_ENABLED:
+            send_signal_notification(live_position)
     else:
         log("No live position")
     log("=" * 50)

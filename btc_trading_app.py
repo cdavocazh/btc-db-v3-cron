@@ -567,6 +567,53 @@ if live_position:
 else:
     st.info("No live position open.")
 
+# ===== POSITION SIZE CALCULATOR =====
+st.markdown("---")
+st.subheader("📐 Position Size Calculator")
+
+# Capital risked input (numbers only)
+capital_risked = st.number_input(
+    "Capital Risked (USDT)",
+    min_value=1.0,
+    max_value=1000000.0,
+    value=500.0,
+    step=100.0,
+    format="%.2f",
+    help="Enter the amount you're willing to risk on this trade"
+)
+
+if live_position:
+    entry_price = live_position['entry_price']
+    stop_price = live_position['stop_price']
+    position_type = live_position['position']
+
+    # Calculate risk per unit (absolute difference between entry and stop)
+    risk_per_unit = abs(entry_price - stop_price)
+
+    if risk_per_unit > 0:
+        # Position size = Capital Risked / Risk per Unit
+        position_size_btc = capital_risked / risk_per_unit
+        position_size_usdt = position_size_btc * entry_price
+
+        # Display results
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Position Size (BTC)", f"{position_size_btc:.6f}")
+        with col2:
+            st.metric("Position Size (USDT)", f"${position_size_usdt:,.2f}")
+        with col3:
+            st.metric("Risk per Unit", f"${risk_per_unit:,.2f}")
+
+        # Show calculation breakdown
+        st.caption(f"Formula: Position Size = Capital Risked / |Entry - Stop| = ${capital_risked:,.2f} / ${risk_per_unit:,.2f} = {position_size_btc:.6f} BTC")
+    else:
+        st.warning("Cannot calculate position size: Entry and Stop prices are the same.")
+else:
+    st.info("No live position available. Position size will be calculated when a signal is generated.")
+
+    # Show example calculation
+    st.caption("Example: With $500 capital risked and a $100 risk per unit (entry-stop), position size = 0.005 BTC")
+
 # ===== SIGNAL CONDITIONS =====
 st.markdown("---")
 st.subheader("🎯 Signal Conditions (Last 12 Hours)")
