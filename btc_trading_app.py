@@ -773,6 +773,118 @@ st.markdown("""
 | **Exit** | First of stop-loss / profit-take / US session open (15:00–20:00 UTC) |
 """)
 
+# ===== ESTIMATED ENTRY POINTS =====
+st.markdown("---")
+st.subheader("🎯 Estimated Entry Points")
+
+if not indicators.empty and live_position is None:
+    # Get the latest indicator values
+    latest_idx = indicators.index[-1]
+    latest = indicators.loc[latest_idx]
+
+    # Extract key values
+    current_close = latest.get('close', 0)
+    upper_band = latest.get('upper_band', 0)
+    lower_band = latest.get('lower_band', 0)
+    rsi = latest.get('rsi14', 50)
+    high_3h = latest.get('high_3h', 0)
+    low_3h = latest.get('low_3h', 0)
+    atr20 = latest.get('atr20', 0)
+    atr20_median = latest.get('atr20_median_all', 0)
+
+    # Check volatility filter
+    vol_filter_met = atr20 > atr20_median if atr20_median > 0 else False
+
+    # Calculate entry points for each strategy
+    entry_points = []
+
+    # Mean-Reversion Long: Price < lower band AND RSI < 30
+    mr_long_price = lower_band
+    mr_long_rsi_met = rsi < 30
+    entry_points.append({
+        'Strategy': 'Mean-Reversion Long',
+        'Direction': 'LONG',
+        'Entry Price': f"< ${mr_long_price:,.2f}",
+        'RSI Condition': f"RSI < 30 (current: {rsi:.1f})",
+        'RSI Met': mr_long_rsi_met,
+        'Vol Filter': vol_filter_met
+    })
+
+    # Mean-Reversion Short: Price > upper band AND RSI > 70
+    mr_short_price = upper_band
+    mr_short_rsi_met = rsi > 70
+    entry_points.append({
+        'Strategy': 'Mean-Reversion Short',
+        'Direction': 'SHORT',
+        'Entry Price': f"> ${mr_short_price:,.2f}",
+        'RSI Condition': f"RSI > 70 (current: {rsi:.1f})",
+        'RSI Met': mr_short_rsi_met,
+        'Vol Filter': vol_filter_met
+    })
+
+    # Breakout Long: Price > 3h high AND RSI > 60
+    bo_long_price = high_3h
+    bo_long_rsi_met = rsi > 60
+    entry_points.append({
+        'Strategy': 'Breakout Long',
+        'Direction': 'LONG',
+        'Entry Price': f"> ${bo_long_price:,.2f}",
+        'RSI Condition': f"RSI > 60 (current: {rsi:.1f})",
+        'RSI Met': bo_long_rsi_met,
+        'Vol Filter': vol_filter_met
+    })
+
+    # Breakout Short: Price < 3h low AND RSI < 40
+    bo_short_price = low_3h
+    bo_short_rsi_met = rsi < 40
+    entry_points.append({
+        'Strategy': 'Breakout Short',
+        'Direction': 'SHORT',
+        'Entry Price': f"< ${bo_short_price:,.2f}",
+        'RSI Condition': f"RSI < 40 (current: {rsi:.1f})",
+        'RSI Met': bo_short_rsi_met,
+        'Vol Filter': vol_filter_met
+    })
+
+    # Create DataFrame for display
+    entry_df = pd.DataFrame(entry_points)
+
+    # Add status column
+    def get_status(row):
+        if row['RSI Met'] and row['Vol Filter']:
+            return "Ready"
+        elif row['RSI Met']:
+            return "RSI Met, Vol Filter Not Met"
+        elif row['Vol Filter']:
+            return "Vol Filter Met, RSI Not Met"
+        else:
+            return "Not Met"
+
+    entry_df['Status'] = entry_df.apply(get_status, axis=1)
+
+    # Display table
+    display_df = entry_df[['Strategy', 'Direction', 'Entry Price', 'RSI Condition', 'Status']]
+    st.dataframe(display_df, use_container_width=True, hide_index=True)
+
+    # Show volatility filter status
+    if vol_filter_met:
+        st.success(f"Volatility Filter: MET (ATR-20: {atr20:.2f} > Median: {atr20_median:.2f})")
+    else:
+        st.warning(f"Volatility Filter: NOT MET (ATR-20: {atr20:.2f} < Median: {atr20_median:.2f})")
+
+    # Show current price context
+    st.caption(f"Based on hourly data at {latest_idx} | Current close: ${current_close:,.2f}")
+
+    # Add note about live price
+    if btc_price:
+        st.caption(f"Live BTC price: ${btc_price:,.2f} - Use 'Refresh Data' to update hourly indicators")
+
+elif live_position:
+    st.info(f"Live position open: {live_position['position'].upper()} @ ${live_position['entry_price']:,.0f}")
+    st.caption("Entry points not shown when a position is already open.")
+else:
+    st.warning("No indicator data available to calculate entry points.")
+
 # Footer
 st.markdown("---")
 st.caption(f"BTC Trading Strategy Dashboard | Data fetched from GitHub at {load_time}")
