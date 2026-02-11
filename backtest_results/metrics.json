@@ -2,33 +2,32 @@
   "metrics": {
     "Variant": "0.50% stop, ATR\u00d73.0",
     "Capital_Risked": "5.0%",
-    "Trades": 1249,
+    "Trades": 1250,
     "Win_rate_pct": 28.0,
     "Win_Loss_ratio": 3.0,
-    "Cum_return_pct": 1412.0,
+    "Cum_return_pct": 1407.0,
     "Max_DD_pct": 12.0,
     "Max_consec_losses": 25,
     "Max_consec_wins": 6,
-    "Win_rate_30d_pct": 27.0,
+    "Win_rate_30d_pct": 23.0,
     "Trades_30d": 30,
-    "PnL_30d": -9511.0,
-    "Win_rate_7d_pct": 18.0,
-    "Trades_7d": 11,
-    "PnL_7d": -37923.0,
-    "Win_rate_3m_pct": 28.0,
-    "Trades_3m": 47,
-    "PnL_3m": -19309.0
+    "PnL_30d": -25338.0,
+    "Win_rate_7d_pct": 17.0,
+    "Trades_7d": 12,
+    "PnL_7d": -42923.0,
+    "Win_rate_3m_pct": 27.0,
+    "Trades_3m": 48,
+    "PnL_3m": -24309.0
   },
   "live_position": {
     "variant": "0.50% stop, ATR\u00d73.0",
-    "entry_time": "2026-02-11 05:00:00",
+    "entry_time": "2026-02-11 07:00:00",
     "position": "long",
-    "entry_price": 67407.0,
-    "stop_price": 67070.0,
-    "tp_price": 69298.0
+    "entry_price": 66786.0,
+    "stop_price": 66452.0,
+    "tp_price": 68569.0
   },
   "equity_curve": [
-    1142718.0398856187,
     1137718.0398856187,
     1151292.0258746974,
     1146292.0258746974,
@@ -527,8 +526,9 @@
     1517574.2790851558,
     1521925.1480424216,
     1516925.1480424216,
-    1511925.1480424216
+    1511925.1480424216,
+    1506925.1480424216
   ],
-  "last_updated": "2026-02-11 06:02:35 UTC",
-  "data_latest_timestamp": "2026-02-11 14:00:00"
+  "last_updated": "2026-02-11 07:02:32 UTC",
+  "data_latest_timestamp": "2026-02-11 15:00:00"
 }
