@@ -1,13 +1,13 @@
 timestamp,close,potential_side,below_lower_MR_long,above_upper_MR_short,price_above_high3,price_below_low3,rsi_gt_60_BO_long,rsi_lt_40_BO_short,potential_stop,atr_gt_median_vol
-2026-03-22 13:00:00,69153.41,0,False,False,False,False,False,True,69153.41,True
-2026-03-22 14:00:00,69164.06,0,False,False,False,False,False,True,69164.06,True
-2026-03-22 15:00:00,68919.38,-1,False,False,False,True,False,True,69263.9769,True
-2026-03-22 16:00:00,68804.77,-1,False,False,False,True,False,True,69148.79385,True
-2026-03-22 17:00:00,68826.2,0,False,False,False,False,False,True,68826.2,True
-2026-03-22 18:00:00,68648.17,0,False,False,False,False,False,True,68648.17,True
-2026-03-22 19:00:00,68217.95,-1,False,False,False,True,False,True,68559.03975,True
-2026-03-22 20:00:00,68654.83,0,False,False,False,False,False,True,68654.83,True
-2026-03-22 21:00:00,68700.02,0,False,False,False,False,False,False,68700.02,True
-2026-03-22 22:00:00,68711.66,0,False,False,False,False,False,False,68711.66,True
-2026-03-22 23:00:00,68847.96,0,False,False,False,False,False,False,68847.96,True
-2026-03-23 00:00:00,68834.66,0,False,False,False,False,False,True,68834.66,True
+2026-03-22 14:00:00,69164.0,0,False,False,False,False,False,True,69164.0,True
+2026-03-22 15:00:00,68923.0,-1,False,False,False,True,False,True,69267.61499999999,True
+2026-03-22 16:00:00,68810.1,-1,False,False,False,True,False,True,69154.1505,True
+2026-03-22 17:00:00,68820.3,0,False,False,False,False,False,True,68820.3,True
+2026-03-22 18:00:00,68650.4,0,False,False,False,False,False,True,68650.4,True
+2026-03-22 19:00:00,68222.1,-1,False,False,False,True,False,True,68563.2105,True
+2026-03-22 20:00:00,68655.4,0,False,False,False,False,False,True,68655.4,True
+2026-03-22 21:00:00,68691.1,0,False,False,False,False,False,False,68691.1,True
+2026-03-22 22:00:00,68709.8,0,False,False,False,False,False,False,68709.8,True
+2026-03-22 23:00:00,68843.9,0,False,False,False,False,False,False,68843.9,True
+2026-03-23 00:00:00,68799.1,0,False,False,False,False,False,True,68799.1,True
+2026-03-23 01:00:00,68785.0,0,False,False,False,False,False,True,68785.0,True
